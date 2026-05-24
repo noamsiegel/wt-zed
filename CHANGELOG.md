@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 - 2026-05-24
+
+- Changed manifest/health version assertions to read the expected version from `wt-plugin.json` instead of hardcoded literals.
+- Future version bumps no longer require touching `tests/test_plugin.bats`.
+- Bumped manifest + script version to 0.1.3.
+
 ## 0.1.2 - 2026-05-24
 
 - Added `RELEASING.md`: release checklist with version-site reminders and recovery notes.

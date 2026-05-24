@@ -13,10 +13,19 @@ SH
 }
 
 @test "manifest outputs valid plugin metadata" {
+  local expected
+  expected="$(manifest_path="$REPO_ROOT/wt-plugin.json" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+print(json.loads(Path(os.environ["manifest_path"]).read_text())["version"])
+PY
+)"
   run "$REPO_ROOT/wt-zed" manifest
   [ "$status" -eq 0 ]
 
-  manifest="$output" python3 - <<'PY'
+  manifest="$output" expected="$expected" python3 - <<'PY'
 import json
 import os
 
@@ -26,21 +35,30 @@ assert data["executable"] == "wt-zed"
 assert data["api_versions"] == ["git-wt.plugin.v0"]
 assert data["events"] == ["wt:worktree-created", "wt:worktree-removed"]
 assert data["capabilities"] == []
-assert data["version"] == "0.1.2"
+assert data["version"] == os.environ["expected"]
 PY
 }
 
 @test "health reports ok and zed availability" {
+  local expected
+  expected="$(manifest_path="$REPO_ROOT/wt-plugin.json" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+print(json.loads(Path(os.environ["manifest_path"]).read_text())["version"])
+PY
+)"
   run "$REPO_ROOT/wt-zed" health
   [ "$status" -eq 0 ]
 
-  health="$output" python3 - <<'PY'
+  health="$output" expected="$expected" python3 - <<'PY'
 import json
 import os
 
 data = json.loads(os.environ["health"])
 assert data["ok"] is True
-assert data["version"] == "0.1.2"
+assert data["version"] == os.environ["expected"]
 assert isinstance(data["zed_available"], bool)
 PY
 }
