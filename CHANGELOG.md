@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 - 2026-05-24
+
+- Added `RELEASING.md`: release checklist with version-site reminders and recovery notes.
+- Added `tests/test_version.bats`: asserts script `VERSION` matches `wt-plugin.json` version.
+- Updated existing manifest/health test assertions from `0.1.0` to current version (drift fix).
+- Bumped to 0.1.2.
+
 ## 0.1.1 - 2026-05-24
 
 - Added `CONTEXT.md` and `AGENTS.md` for plugin-specific invariants and agent orientation.

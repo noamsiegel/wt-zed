@@ -26,7 +26,7 @@ assert data["executable"] == "wt-zed"
 assert data["api_versions"] == ["git-wt.plugin.v0"]
 assert data["events"] == ["wt:worktree-created", "wt:worktree-removed"]
 assert data["capabilities"] == []
-assert data["version"] == "0.1.0"
+assert data["version"] == "0.1.2"
 PY
 }
 
@@ -40,7 +40,7 @@ import os
 
 data = json.loads(os.environ["health"])
 assert data["ok"] is True
-assert data["version"] == "0.1.0"
+assert data["version"] == "0.1.2"
 assert isinstance(data["zed_available"], bool)
 PY
 }

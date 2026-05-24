@@ -9,7 +9,7 @@
     "wt:worktree-removed"
   ],
   "capabilities": [],
-  "version": "0.1.1",
+  "version": "0.1.2",
   "source": "https://github.com/noamsiegel/wt-zed",
   "description": "Zed editor integration for git-wt"
 }
