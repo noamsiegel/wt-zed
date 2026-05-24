@@ -2,19 +2,11 @@
 
 Zed editor integration for [`git-wt`](https://github.com/noamsiegel/git-wt).
 
-`wt-zed` is a `git-wt.plugin.v0` plugin. When `git-wt` creates a new worktree, the plugin opens that worktree in Zed with:
-
-```sh
-zed -n <worktree-path>
-```
-
-`-n` asks Zed to open the project in a new window. The plugin intentionally does not use `zed --add`, which may add the worktree to the current window instead.
-
-When a worktree is removed, `wt-zed` returns a best-effort no-op because Zed's documented CLI supports opening projects but does not expose a non-interactive close-workspace command.
+`wt-zed` does one thing: open new git-wt worktrees in a new Zed window. It implements `git-wt.plugin.v0`; the protocol source of truth is git-wt's [`docs/plugin-contract.md`](https://github.com/noamsiegel/git-wt/blob/main/docs/plugin-contract.md). Plugin-family comparison lives in git-wt's [`docs/plugins.md`](https://github.com/noamsiegel/git-wt/blob/main/docs/plugins.md).
 
 ## Install
 
-Once `wt-zed` is in the `git-wt` plugin registry:
+From the git-wt registry:
 
 ```sh
 wt plugin install zed
@@ -26,11 +18,26 @@ Explicit install from GitHub:
 wt plugin install noamsiegel/wt-zed
 ```
 
+Local development:
+
+```sh
+wt plugin link /path/to/wt-zed
+```
+
+## Behavior
+
+| git-wt event | Zed action |
+|---|---|
+| `wt:worktree-created` | Run `zed -n <worktree-path>` to open the worktree in a new Zed window. |
+| `wt:worktree-removed` | Return best-effort `noop`; Zed's documented CLI does not expose non-interactive close-workspace. |
+
+`-n` asks Zed to open the project in a new window. The plugin intentionally does not use `zed --add`, which may add the worktree to the current window instead.
+
 ## Requirements
 
-- `git-wt` with plugin support
-- Zed CLI on `PATH` for opening worktrees (`zed`)
-- `python3` or `yq` for parsing event payload JSON
+- `git-wt` with `git-wt.plugin.v0` support.
+- Zed CLI on `PATH` as `zed`.
+- `python3` or `yq` for parsing event payload JSON.
 
 `wt-zed health` reports whether `zed` is currently available.
 
@@ -43,19 +50,25 @@ wt-zed event wt:worktree-created < payload.json
 wt-zed event wt:worktree-removed < payload.json
 ```
 
-## Manifest
+## Environment
 
-The plugin manifest is `wt-plugin.json` next to the executable:
+No plugin-specific environment variables today. Configure Zed through Zed's own CLI/settings surface.
 
-```json
-{
-  "name": "zed",
-  "executable": "wt-zed",
-  "api_versions": ["git-wt.plugin.v0"],
-  "events": ["wt:worktree-created", "wt:worktree-removed"],
-  "capabilities": [],
-  "version": "0.1.0",
-  "source": "https://github.com/noamsiegel/wt-zed",
-  "description": "Zed editor integration for git-wt"
-}
+## What it doesn't do
+
+- Does not define the git-wt plugin API; git-wt owns `git-wt.plugin.v0`.
+- Does not install, update, or configure Zed.
+- Does not close Zed windows on worktree removal; Zed has no documented non-interactive close command.
+- Does not focus existing Zed windows or answer `wt:list`.
+- Does not manage git worktree naming, branch policy, or cleanup policy.
+
+## Development
+
+```sh
+bats tests/test_plugin.bats
+bash -n wt-zed
 ```
+
+## License
+
+MIT. See [LICENSE](./LICENSE).
