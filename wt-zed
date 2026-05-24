@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# wt-zed — git-wt plugin for opening new worktrees in Zed.
+
+set -euo pipefail
+IFS=$'\n\t'
+
+VERSION="0.1.0"
+
+err()  { printf '%s\n' "$*" >&2; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+self_dir() {
+  cd "$(dirname "$0")" && pwd
+}
+
+json_string() {
+  local value="$1"
+  if have python3; then
+    VALUE="$value" python3 - <<'PY'
+import json
+import os
+print(json.dumps(os.environ.get("VALUE", "")))
+PY
+  else
+    # Minimal fallback for PATH-like strings when python3 is unavailable.
+    value=${value//\\/\\\\}
+    value=${value//"/\\"}
+    printf '"%s"' "$value"
+  fi
+}
+
+worktree_path_from_payload() {
+  local payload="$1"
+  if have python3; then
+    PAYLOAD="$payload" python3 - <<'PY'
+import json
+import os
+import sys
+try:
+    data = json.loads(os.environ.get("PAYLOAD", ""))
+except Exception:
+    sys.exit(1)
+path = data.get("worktree", {}).get("path", "")
+if not isinstance(path, str) or not path:
+    sys.exit(1)
+print(path)
+PY
+    return
+  fi
+
+  if have yq; then
+    printf '%s' "$payload" | yq -p json -r '.worktree.path // ""' 2>/dev/null
+    return
+  fi
+
+  return 1
+}
+
+cmd_manifest() {
+  local dir
+  dir=$(self_dir)
+  cat "$dir/wt-plugin.json"
+}
+
+cmd_health() {
+  local zed_available=false
+  if have zed; then
+    zed_available=true
+  fi
+  printf '{"ok":true,"version":"%s","zed_available":%s}\n' "$VERSION" "$zed_available"
+}
+
+handle_worktree_created() {
+  local payload="$1" path
+  if ! path=$(worktree_path_from_payload "$payload"); then
+    err "wt-zed: missing worktree.path in payload"
+    printf '{"status":"noop","reason":"missing-worktree-path"}\n'
+    return 0
+  fi
+
+  if ! have zed; then
+    err "wt-zed: zed CLI not found; skipping open for $path"
+    printf '{"status":"noop","reason":"zed-not-found"}\n'
+    return 0
+  fi
+
+  # Zed docs: `zed -n <path>` opens a project in a new window. Avoid `--add`,
+  # which may attach the worktree to the current window instead.
+  if (zed -n "$path" >/dev/null 2>&1 &); then
+    printf '{"status":"ok","action":"open","path":%s}\n' "$(json_string "$path")"
+  else
+    err "wt-zed: failed to launch zed for $path"
+    printf '{"status":"noop","reason":"zed-launch-failed"}\n'
+  fi
+}
+
+handle_worktree_removed() {
+  # Zed CLI currently documents opening projects, including `zed -n <path>` for a
+  # new window. It does not document a non-interactive close-workspace command.
+  printf '{"status":"noop","reason":"zed-close-workspace-not-supported"}\n'
+}
+
+cmd_event() {
+  local event="${1:-}" payload
+  [[ -n "$event" ]] || { err "wt-zed: usage: wt-zed event <event-name>"; exit 2; }
+  payload=$(cat)
+
+  case "$event" in
+    wt:worktree-created) handle_worktree_created "$payload" ;;
+    wt:worktree-removed) handle_worktree_removed "$payload" ;;
+    *)                   printf '{"status":"ignored","event":%s}\n' "$(json_string "$event")" ;;
+  esac
+}
+
+main() {
+  case "${1:-}" in
+    manifest) cmd_manifest ;;
+    health)   cmd_health ;;
+    event)    shift; cmd_event "$@" ;;
+    -h|--help|help|"")
+      cat <<EOF
+wt-zed — Zed editor plugin for git-wt.
+
+usage:
+  wt-zed manifest             print plugin manifest JSON
+  wt-zed health               check zed CLI availability
+  wt-zed event <name> < json  handle one lifecycle event
+
+Events: wt:worktree-created, wt:worktree-removed.
+API: git-wt.plugin.v0
+Source: https://github.com/noamsiegel/wt-zed
+EOF
+      ;;
+    *)
+      err "wt-zed: unknown subcommand: $1"
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"

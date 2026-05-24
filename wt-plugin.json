@@ -1,0 +1,15 @@
+{
+  "name": "zed",
+  "executable": "wt-zed",
+  "api_versions": [
+    "git-wt.plugin.v0"
+  ],
+  "events": [
+    "wt:worktree-created",
+    "wt:worktree-removed"
+  ],
+  "capabilities": [],
+  "version": "0.1.0",
+  "source": "https://github.com/noamsiegel/wt-zed",
+  "description": "Zed editor integration for git-wt"
+}
